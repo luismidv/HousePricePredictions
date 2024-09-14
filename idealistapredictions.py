@@ -6,6 +6,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import PartialDependenceDisplay
 from sklearn.metrics import mean_absolute_error
+from xgboost import XGBRegressor
+from sklearn.model_selection import cross_val_score
 import shap
 #import eli5
 #from eli5 import PermutationImportance
@@ -114,9 +116,37 @@ def shapsummary(model_regressor,val_X):
     shap_values = explainer.shap_values(val_X)
     shap.summary_plot(shap_values[1], val_X)
 
+def cross_validation_applying(data):
+    """USE CROSS VALIDATION SO WE KNOW WHICH PART OF OUR DATASET IS BETTER TO USE AS TEST/TRAIN
+       IT'S PRETTY USEFULL WHEN YOU DON'T HAVE A LARGE DATASET, WHAT IN GENERAL GIVES YOU A BETTER ACCURACY"""
+    #data.columns = ['Price', 'Floor', 'Metters']
+    data.columns = [['Price', 'Floor', 'Metters']]
+    features = data[['Floor', 'Metters']]
+    labels = data['Price']
+    rand_forest = RandomForestRegressor(n_estimators=200, random_state=0)
+    scores = -1* cross_val_score(rand_forest, features, labels.values.ravel(), cv = 5, scoring='neg_mean_absolute_error')
+    print("MAE scores\n", scores)
+
+def xgboost_applying(data):
+    """APPLYING XGBOOST TO GET THE MEAN ABSOLUTE ERROR, NOTICE THAT WE ARE NOT USING N_JOBS, THAT'S BECAUSE IT'S A SHORT DATASET,
+       IN CASES WHERE WE HAVE A LARGER DATASET N_JOB IS A GOOD IDEA"""
+    data.columns = ['Price', 'Floors', 'Metters']
+    features = data[['Floors', 'Metters']]
+    labels = data['Price']
+    X_train, X_valid, y_train, y_valid = train_test_split(features,labels, random_state=0)
+    xgb_model = XGBRegressor(n_estimators = 50, learning_rate = 0.05, random_state = 0, early_stopping_rounds = 5,)
+    xgb_model.fit(X_train, y_train, eval_set=[(X_valid, y_valid)], verbose = False)
+    predictions = xgb_model.predict(X_valid)
+    mae = mean_absolute_error(predictions, y_valid)
+    print(mae)
+
 data = description()
 datatest = description_test()
 data = fill_dataframe(data)
 print(data)
-build_data_and_predict(data)
+#build_data_and_predict(data)
+#cross_validation_applying(data)
+xgboost_applying(data)
+
+
 
